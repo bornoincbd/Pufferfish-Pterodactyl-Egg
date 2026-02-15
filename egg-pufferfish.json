@@ -1,0 +1,71 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2025-08-08T17:13:45+03:00",
+    "name": "Pufferfish",
+    "author": "admin@bornocloud.xyz",
+    "description": "Pufferfish is a high-performance fork of Paper designed for large-scale servers. Optimized by Borno Inc for maximum stability and speed.",
+    "features": [
+        "eula",
+        "java_version",
+        "pid_limit"
+    ],
+    "docker_images": {
+        "Java 25": "ghcr.io/pterodactyl/yolks:java_25",
+        "Java 21": "ghcr.io/pterodactyl/yolks:java_21",
+        "Java 17": "ghcr.io/pterodactyl/yolks:java_17",
+        "Java 16": "ghcr.io/pterodactyl/yolks:java_16",
+        "Java 11": "ghcr.io/pterodactyl/yolks:java_11",
+        "Java 8": "ghcr.io/pterodactyl/yolks:java_8"
+    },
+    "file_denylist": [],
+    "startup": "java -Xms128M -XX:MaxRAMPercentage=95.0 {{JAVA_FLAGS}} -jar {{SERVER_JARFILE}}",
+    "config": {
+        "files": "{\r\n    \"server.properties\": {\r\n        \"parser\": \"properties\",\r\n        \"find\": {\r\n            \"server-ip\": \"0.0.0.0\",\r\n            \"server-port\": \"{{server.build.default.port}}\",\r\n            \"query.port\": \"{{server.build.default.port}}\"\r\n        }\r\n    }\r\n}",
+        "startup": "{\r\n    \"done\": \")! For help, type \"\r\n}",
+        "logs": "{}",
+        "stop": "stop"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/ash\r\n# Pufferfish Installation Script - Fixed by Borno Inc\r\n\r\ncd /mnt/server\r\n\r\nif [ -n \"${DL_PATH}\" ]; then\r\n    echo -e \"Using supplied download url: ${DL_PATH}\"\r\n    DOWNLOAD_URL=`eval echo $(echo ${DL_PATH} | sed -e 's/{{/${/g' -e 's/}}/}/g')`\r\nelse\r\n    MC_VER=\"${MINECRAFT_VERSION}\"\r\n    if [ \"${MC_VER}\" == \"latest\" ] || [ -z \"${MC_VER}\" ]; then\r\n        MC_VER=\"1.21\"\r\n        echo -e \"Latest version selected. Fetching Pufferfish ${MC_VER} build...\"\r\n    else\r\n        echo -e \"Fetching Pufferfish for version: ${MC_VER}\"\r\n    fi\r\n\r\n    JOB_NAME=\"Pufferfish-${MC_VER}\"\r\n    API_URL=\"https://ci.pufferfish.host/job/${JOB_NAME}/lastSuccessfulBuild/api/json\"\r\n    \r\n    # Get Jenkins JSON data\r\n    API_RESPONSE=$(curl -sSL \"${API_URL}\")\r\n    \r\n    if echo \"$API_RESPONSE\" | grep -q \"Not Found\" || [ -z \"$API_RESPONSE\" ]; then\r\n        echo -e \"Specific job not found, trying fallback 'Pufferfish' job...\"\r\n        JOB_NAME=\"Pufferfish\"\r\n        API_URL=\"https://ci.pufferfish.host/job/${JOB_NAME}/lastSuccessfulBuild/api/json\"\r\n        API_RESPONSE=$(curl -sSL \"${API_URL}\")\r\n    fi\r\n\r\n    # Extract exact artifact path dynamically\r\n    ARTIFACT_PATH=$(echo \"$API_RESPONSE\" | sed -n 's/.*\"relativePath\":\"\\([^\"]*\\)\".*/\\1/p' | head -n 1)\r\n\r\n    if [ -n \"$ARTIFACT_PATH\" ]; then\r\n        DOWNLOAD_URL=\"https://ci.pufferfish.host/job/${JOB_NAME}/lastSuccessfulBuild/artifact/${ARTIFACT_PATH}\"\r\n    else\r\n        echo -e \"Jenkins API failed. Trying official Pufferfish download portal fallback...\"\r\n        DOWNLOAD_URL=\"https://pufferfish.host/download/${MC_VER}/latest\"\r\n    fi\r\nfi\r\n\r\necho -e \"Downloading from: ${DOWNLOAD_URL}\"\r\n\r\nif [ -f ${SERVER_JARFILE} ]; then\r\n    mv ${SERVER_JARFILE} ${SERVER_JARFILE}.old\r\nfi\r\n\r\nif ! curl -fsSL -o ${SERVER_JARFILE} \"${DOWNLOAD_URL}\"; then\r\n    echo -e \"Download failed on primary link.\"\r\nfi\r\n\r\nif [ ! -s ${SERVER_JARFILE} ] || [ $(stat -c%s \"${SERVER_JARFILE}\") -lt 1000000 ]; then\r\n    echo -e \"-------------------------------------------------------\"\r\n    echo -e \"ERROR: Download failed! The JAR is missing or too small.\"\r\n    echo -e \"Make sure Pufferfish supports version: ${MC_VER}\"\r\n    echo -e \"-------------------------------------------------------\"\r\n    exit 1\r\nfi\r\n\r\necho -e \"Download complete!\"\r\n\r\nif [ ! -f server.properties ]; then\r\n    curl -sSL -o server.properties https://raw.githubusercontent.com/parkervcp/eggs/master/minecraft/java/server.properties\r\nfi",
+            "container": "ghcr.io/pterodactyl/installers:alpine",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Minecraft Version",
+            "description": "The version of Pufferfish (e.g., 1.21, 1.20.1).\r\n\r\nDefault is latest (1.21).",
+            "env_variable": "MINECRAFT_VERSION",
+            "default_value": "latest",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:20",
+            "field_type": "text"
+        },
+        {
+            "name": "Server Jar File",
+            "description": "The name of the server jarfile.",
+            "env_variable": "SERVER_JARFILE",
+            "default_value": "server.jar",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|regex:/^([\\w\\d._-]+)(\\.jar)$/",
+            "field_type": "text"
+        },
+        {
+            "name": "Startup Flags",
+            "description": "Optimized Java flags (Aikar's Flags).",
+            "env_variable": "JAVA_FLAGS",
+            "default_value": "--add-modules=jdk.incubator.vector -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:MaxGCPauseMillis=200 -XX:+UnlockExperimentalVMOptions -XX:+DisableExplicitGC -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=4 -XX:InitiatingHeapOccupancyPercent=15 -XX:G1MixedGCLiveThresholdPercent=90 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:+PerfDisableSharedMem -XX:MaxTenuringThreshold=1 -Dusing.aikars.flags=https://mcflags.emc.gs -Daikars.new.flags=true -XX:G1NewSizePercent=30 -XX:G1MaxNewSizePercent=40 -XX:G1HeapRegionSize=8M -XX:G1ReservePercent=20",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        }
+    ]
+}
